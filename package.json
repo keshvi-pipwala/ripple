@@ -1,0 +1,9 @@
+{
+  "name": "ripple",
+  "version": "1.0.0",
+  "description": "When one decision moves, see what moves with it. A working demo of dependent-fact checks for team memory.",
+  "scripts": { "test": "node ripple.test.js" },
+  "devDependencies": { "puppeteer-core": "^23.0.0" },
+  "author": "Keshvi Pipwala",
+  "license": "MIT"
+}

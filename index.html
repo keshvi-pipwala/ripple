@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ripple: when one decision moves, see what moves with it</title>
+<meta name="description" content="A working demo of dependent-fact checks for team memory: change one decision, see every fact that depends on it, and route each call to the right owner.">
+<link rel="canonical" href="https://keshvi-pipwala.github.io/ripple/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://keshvi-pipwala.github.io/ripple/">
+<meta property="og:title" content="Ripple: when one decision moves, see what moves with it">
+<meta property="og:description" content="Change one decision and see every fact that depends on it. Pure date math updates itself; real decisions go to their owner.">
+<meta property="og:image" content="https://keshvi-pipwala.github.io/ripple/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Keshvi Pipwala">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='4' fill='%236c8cff'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%236c8cff' stroke-opacity='.6' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='14' fill='none' stroke='%236c8cff' stroke-opacity='.3' stroke-width='2'/%3E%3C/svg%3E">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Ripple","description":"A working demo of dependent-fact checks for team memory.","url":"https://keshvi-pipwala.github.io/ripple/","applicationCategory":"BusinessApplication","author":{"@type":"Person","name":"Keshvi Pipwala","url":"https://keshvi-portfolio-ten.vercel.app/"}}</script>
+<style>
+:root{
+  --bg:#0e1014;--panel:#161a21;--panel2:#1c212a;--line:#2a313d;--ink:#e8ebf1;--muted:#98a1b2;--dim:#6b7486;
+  --blue:#6c8cff;--blue-soft:rgba(108,140,255,.14);--green:#3ecf8e;--green-soft:rgba(62,207,142,.13);
+  --amber:#f5b544;--amber-soft:rgba(245,181,68,.14);--red:#ff6b6b;--red-soft:rgba(255,107,107,.13);
+  --violet:#b48cff;--violet-soft:rgba(180,140,255,.14);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,"Segoe UI",system-ui,-apple-system,sans-serif}
+button{font:inherit;cursor:pointer}
+.wrap{max-width:1320px;margin:0 auto;padding:22px 20px 40px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 50% 50%,var(--blue) 0 22%,transparent 23% 38%,rgba(108,140,255,.55) 39% 46%,transparent 47% 62%,rgba(108,140,255,.25) 63% 70%,transparent 71%)}
+h1{font-size:20px;margin:0;letter-spacing:-.01em}
+.tag{color:var(--muted);font-size:13px;margin-top:2px}
+.hdr-actions{display:flex;gap:8px}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:7px 12px;border-radius:8px}
+.btn:hover{border-color:#3b4454}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#0b0f1a;font-weight:600}
+.btn.small{padding:4px 9px;font-size:12.5px;border-radius:7px}
+.guide{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,rgba(108,140,255,.16),rgba(108,140,255,.04));border:1px solid rgba(108,140,255,.35);border-radius:10px;padding:10px 14px;margin-bottom:14px}
+.guide .step{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--blue);white-space:nowrap}
+.guide .txt{flex:1}
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
+.mapwrap{border-bottom:1px solid var(--line);padding:8px 10px 4px;background:#12161c}
+.mapwrap svg{width:100%;height:auto;display:block}
+.mapcap{font-size:11.5px;color:var(--dim);padding:0 4px 6px}
+.node rect{fill:#1c212a;stroke:#3a4352;stroke-width:1.5;transition:stroke .3s,fill .3s}
+.node text{fill:#e8ebf1;font-size:11.5px;font-family:inherit}
+.node text.sub{fill:#98a1b2;font-size:10.5px}
+.node.updated rect{stroke:#6c8cff;fill:#1b2238}.node.conflict rect{stroke:#ff6b6b;fill:#2a1a1d}
+.node.pending rect{stroke:#f5b544;fill:#2a2418}.node.blocked rect{stroke:#98a1b2;stroke-dasharray:4 3}
+.node.free rect{stroke:#2a313d;stroke-dasharray:3 3}.node.free text{fill:#6b7486}
+.node.pulse rect{animation:npulse 1.3s ease}
+@keyframes npulse{0%{stroke-width:1.5}25%{stroke-width:5}100%{stroke-width:1.5}}
+.edge{stroke:#3a4352;stroke-width:1.5;fill:none}
+.edge.rule{stroke:#3ecf8e;stroke-dasharray:5 4}
+.edge.hot{stroke:#6c8cff;stroke-width:2.2}
+.elabel{fill:#8a93a5;font-size:10px;font-family:inherit;paint-order:stroke;stroke:#12161c;stroke-width:4px;stroke-linejoin:round}
+.scope{margin-top:12px;font-size:12.5px;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:10px 14px}
+.scope b{color:var(--ink)}
+footer a{color:var(--muted)}
+.metric{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.metric .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.metric .k{font-size:11.5px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:270px 1fr 340px;gap:14px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.panel h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;padding:11px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.panel h2 .count{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:0 8px;font-size:11px;color:var(--ink)}
+.pbody{padding:12px 14px}
+.event{width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 11px;margin-bottom:9px;color:var(--ink);transition:border-color .15s}
+.event:hover:not(:disabled){border-color:#4a5568}
+.event:disabled{opacity:.42;cursor:not-allowed}
+.event.pulse{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.src{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;padding:1px 7px;border-radius:5px;margin-bottom:5px}
+.src.jira{background:rgba(76,154,255,.16);color:#7fb4ff}.src.slack{background:rgba(224,30,90,.15);color:#ff7aa5}
+.src.agent{background:var(--violet-soft);color:var(--violet)}.src.github{background:rgba(200,200,200,.12);color:#cfd5df}
+.event .t{font-weight:600;font-size:13.5px}
+.event .d{color:var(--muted);font-size:12.5px;margin-top:2px}
+.note{color:var(--dim);font-size:12px;margin-top:4px}
+.fact{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:9px;background:var(--panel2);transition:border-color .25s, box-shadow .25s}
+.fact.flash{animation:flash 1.4s ease}
+@keyframes flash{0%{box-shadow:0 0 0 0 rgba(108,140,255,.0)}20%{box-shadow:0 0 0 4px rgba(108,140,255,.45)}100%{box-shadow:0 0 0 0 rgba(108,140,255,0)}}
+.fact.conflict{border-color:rgba(255,107,107,.6)}
+.fact.pending{border-color:rgba(245,181,68,.6)}
+.fact.blocked{border-color:rgba(152,161,178,.45);border-style:dashed}
+.frow{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.type{font-size:10.5px;font-weight:700;letter-spacing:.05em;padding:1px 7px;border-radius:5px;background:var(--blue-soft);color:var(--blue);white-space:nowrap}
+.type.deadline{background:var(--amber-soft);color:var(--amber)}
+.type.question{background:var(--violet-soft);color:var(--violet)}
+.type.spec{background:rgba(200,200,200,.1);color:#cfd5df}
+.ftext{font-weight:600;margin:5px 0 3px}
+.fmeta{color:var(--muted);font-size:12px}
+.fmeta b{color:var(--ink);font-weight:600}
+.dep{color:var(--dim);font-size:12px;margin-top:4px}
+.status{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.status.ok{background:var(--green-soft);color:var(--green)}
+.status.conflict{background:var(--red-soft);color:var(--red)}
+.status.pending{background:var(--amber-soft);color:var(--amber)}
+.status.blocked{background:rgba(152,161,178,.13);color:var(--muted)}
+.status.updated{background:var(--blue-soft);color:var(--blue)}
+.old{text-decoration:line-through;color:var(--dim);font-weight:400;margin-right:4px}
+.item{border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:10px;background:var(--panel2)}
+.item.conflict{border-left:3px solid var(--red)}.item.proposal{border-left:3px solid var(--amber)}
+.item.claim{border-left:3px solid #ff7aa5}.item.assumption{border-left:3px solid var(--violet)}
+.item .who{font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between}
+.item .ttl{font-weight:600;margin:4px 0}
+.item .why{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.item .opts{display:flex;flex-wrap:wrap;gap:6px}
+.item .opts .btn{font-size:12.5px;padding:5px 9px}
+.item .opts .btn.go{border-color:rgba(62,207,142,.55);color:var(--green)}
+.empty{color:var(--dim);font-size:13px;text-align:center;padding:18px 6px}
+.bottom{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.agentbox{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:#0b0d11;border-top:1px solid var(--line);padding:12px 14px;min-height:120px;white-space:pre-wrap}
+.agentbox .q{color:var(--violet)}.agentbox .a{color:var(--ink)}.agentbox .w{color:var(--amber)}.agentbox .s{color:var(--dim)}
+.log{max-height:280px;overflow:auto}
+.log .row{display:flex;gap:10px;padding:7px 14px;border-bottom:1px solid rgba(42,49,61,.6);font-size:12.5px}
+.log .time{color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lane{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:5px;white-space:nowrap;height:fit-content}
+.lane.source{background:rgba(76,154,255,.16);color:#7fb4ff}.lane.rule{background:var(--green-soft);color:var(--green)}
+.lane.person{background:var(--amber-soft);color:var(--amber)}.lane.agent{background:var(--violet-soft);color:var(--violet)}
+.lane.check{background:rgba(200,200,200,.1);color:#cfd5df}
+.how{margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.how div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--muted)}
+.how b{display:block;color:var(--ink);margin-bottom:3px}
+footer{margin-top:18px;color:var(--dim);font-size:12px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);background:#222937;border:1px solid var(--line);padding:9px 14px;border-radius:9px;opacity:0;transition:all .25s;font-size:13px;pointer-events:none;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:1100px){.grid{grid-template-columns:1fr 1fr}.grid .sources{grid-column:1 / -1}.metrics{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:720px){.grid,.bottom,.how{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.guide{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><div class="logo" aria-hidden="true"></div>
+      <div><h1>Ripple</h1><div class="tag">When one decision moves, see what moves with it.</div></div>
+    </div>
+    <div class="hdr-actions">
+      <button class="btn" id="resetBtn" type="button">Reset demo</button>
+    </div>
+  </header>
+
+  <div class="guide" role="status" aria-live="polite">
+    <span class="step" id="guideStep">STEP 1 OF 5</span>
+    <span class="txt" id="guideTxt"></span>
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><div class="v" id="mChecked">0</div><div class="k">Dependent facts checked</div></div>
+    <div class="metric"><div class="v" id="mRule">0</div><div class="k">Updated by a rule</div></div>
+    <div class="metric"><div class="v" id="mPerson">0</div><div class="k">Sent to a person</div></div>
+    <div class="metric"><div class="v" id="mOpen">0</div><div class="k">Waiting on an owner</div></div>
+    <div class="metric"><div class="v" id="mAssume">0</div><div class="k">Agent assumptions open</div></div>
+    <div class="metric"><div class="v" id="mMedian">–</div><div class="k">Median minutes to settle</div></div>
+  </div>
+
+  <div class="grid">
+    <section class="panel sources" aria-label="Incoming changes">
+      <h2>Incoming changes</h2>
+      <div class="pbody" id="events"></div>
+    </section>
+
+    <section class="panel" aria-label="Team memory">
+      <h2>Team memory · Larkspur auth migration <span class="count" id="factCount"></span></h2>
+      <div class="mapwrap"><svg id="map" viewBox="0 0 660 222" role="img" aria-label="Map of which facts depend on which"></svg><div class="mapcap">Solid lines: an owner decides. Dashed green: a rule updates it. Unlinked facts are checked and left alone.</div></div>
+      <div class="pbody" id="facts"></div>
+    </section>
+
+    <section class="panel" aria-label="Owner inbox">
+      <h2>Needs a person <span class="count" id="inboxCount">0</span></h2>
+      <div class="pbody" id="inbox"></div>
+    </section>
+  </div>
+
+  <div class="bottom">
+    <section class="panel" aria-label="Coding agent">
+      <h2>Coding agent, reading team memory</h2>
+      <div class="agentbox" id="agent"><span class="s">The agent asks team memory before it acts. Its answers appear here.</span></div>
+    </section>
+    <section class="panel" aria-label="Audit log">
+      <h2>Audit log <span class="count" id="logCount">0</span></h2>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+
+  <div class="how">
+    <div><b>1. Source of record changes</b>A change from the system that owns a fact is applied right away and logged with its source.</div>
+    <div><b>2. Rules handle the arithmetic</b>Facts that are pure math on another fact update themselves. No one needs to approve "3 days after".</div>
+    <div><b>3. People own the decisions</b>When a change breaks a decision, it goes to that decision's owner with the reason and clear options. Agent guesses wait for them too.</div>
+  </div>
+
+  <div class="scope"><b>What this demo leaves out.</b> The links between facts are set by hand here. In a real team, finding those links automatically from tickets, docs and chat is the hard part, and so is deciding which source is the record for each fact.</div>
+
+  <footer>
+    <span>Built by <a href="https://www.linkedin.com/in/keshvi-pipwala-5a7bb0247/">Keshvi Pipwala</a> · Independent demo with a fictional team and fictional data. Not affiliated with any company or product.</span>
+    <span id="clock"></span>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:20px">This demo needs JavaScript turned on.</p></noscript>
+
+<script>
+(function(){
+"use strict";
+var MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function D(y,m,d){return Date.UTC(y,m-1,d);}
+function addDays(t,n){return t+n*86400000;}
+function fmt(t){var x=new Date(t);return x.getUTCDate()+" "+MONTHS[x.getUTCMonth()];}
+function diffDays(a,b){return Math.round((a-b)/86400000);}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+
+var OWNERS={dana:"Dana Ortiz",sam:"Sam Okafor",lena:"Lena Park",ravi:"Ravi Mehta"};
+var ROLES={dana:"auth migration lead",sam:"platform reliability",lena:"customer comms",ravi:"QA"};
+
+var S; // state
+
+function initialState(){
+  return {
+    clock:9*60+2, step:0, seq:0,
+    metrics:{checked:0,rule:0,person:0},
+    fired:{jira:false,slack:false,agent:false,github:false},
+    facts:[
+      {id:"cutover",type:"Decision",owner:"dana",source:"Jira AUTH-142",date:D(2026,12,2),
+       text:function(f){return "Cut over to the new auth service on "+fmt(f.date);},deps:[]},
+      {id:"traffic",type:"Deadline",owner:"sam",source:"Jira AUTH-150",date:D(2026,12,9),
+       text:function(f){return "100% of traffic on the new service by "+fmt(f.date);},
+       deps:[{on:"cutover",kind:"after",days:0,why:"Traffic can't be fully on the new service before the cutover happens."}]},
+      {id:"rollback",type:"Deadline",owner:"sam",source:"Runbook RB-7",date:D(2026,12,12),
+       text:function(f){return "Rollback window closes "+fmt(f.date)+" (3 days after 100% traffic)";},
+       deps:[{on:"traffic",kind:"rule",days:3}]},
+      {id:"retire",type:"Decision",owner:"dana",source:"Confluence: Auth plan",date:D(2027,1,1),
+       text:function(f){return "Retire legacy login on "+fmt(f.date)+" (30 days after cutover)";},
+       deps:[{on:"cutover",kind:"propose",days:30,why:"The plan says legacy login retires 30 days after cutover. Keeping the old date shortens that window, so the owner decides."}]},
+      {id:"email",type:"Decision",owner:"lena",source:"Comms calendar",date:D(2026,11,25),
+       text:function(f){return "Customer email about the new sign-in goes out "+fmt(f.date);},
+       deps:[{on:"cutover",kind:"propose",days:-7,why:"The email is planned one week before cutover. Sending it on the old date would announce the change earlier than planned."}]},
+      {id:"qa",type:"Deadline",owner:"ravi",source:"Jira AUTH-151",date:D(2026,11,30),
+       text:function(f){return "QA sign-off on new sign-in screens by "+fmt(f.date);},
+       deps:[{on:"cutover",kind:"before",days:-2,why:"QA has to sign off at least 2 days before cutover."}]},
+      {id:"spec",type:"Spec",owner:"ravi",source:"Figma: Sign-in v3",date:null,
+       text:function(){return "Sign-in screens v3, ready for build";},deps:[]},
+      {id:"sms",type:"Open question",owner:"dana",source:"Slack #auth-cutover",date:null,
+       text:function(){return "Keep SMS fallback after cutover?";},deps:[]}
+    ],
+    status:{}, prev:{}, blockedBy:{}, inbox:[], log:[], agent:[], assumption:null, settledTimes:[]
+  };
+}
+
+function F(id){for(var i=0;i<S.facts.length;i++){if(S.facts[i].id===id)return S.facts[i];}return null;}
+function now(){var h=Math.floor(S.clock/60),m=S.clock%60;return (h<10?"0":"")+h+":"+(m<10?"0":"")+m;}
+function tick(n){S.clock+=n;}
+function log(lane,text){S.log.unshift({t:now(),lane:lane,text:text});}
+function toast(msg){var el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(function(){el.classList.remove("show");},2600);}
+var flashIds={};
+function flash(id){flashIds[id]=true;pulseIds[id]=true;}
+
+function dependents(id){return S.facts.filter(function(f){return f.deps.some(function(d){return d.on===id;});});}
+function openItemFor(factId){return S.inbox.filter(function(it){return it.factId===factId&&!it.done;})[0];}
+
+/* Core: a fact changed. Walk everything that depends on it. */
+function ripple(changedId){
+  var deps=dependents(changedId);
+  var parent=F(changedId);
+  deps.forEach(function(child){
+    var d=child.deps.filter(function(x){return x.on===changedId;})[0];
+    S.metrics.checked++;
+    if(S.status[child.id]==="blocked"&&S.blockedBy[child.id]===changedId){delete S.blockedBy[child.id];S.status[child.id]="ok";}
+    if(d.kind==="rule"){
+      var nd=addDays(parent.date,d.days);
+      if(nd!==child.date){
+        S.prev[child.id]=child.date;child.date=nd;S.status[child.id]="updated";S.metrics.rule++;flash(child.id);
+        log("rule",'"'+child.text(child)+'" recalculated from the '+shortName(parent).toLowerCase()+" ("+fmt(S.prev[child.id])+" → "+fmt(nd)+"). No approval needed.");
+        ripple(child.id);
+      } else {log("check",'"'+shortName(child)+'" checked. Still correct.');}
+      return;
+    }
+    if(d.kind==="after"){
+      var minDate=addDays(parent.date,d.days);
+      if(child.date<minDate){
+        raise(child,"conflict",parent,d,
+          shortName(child)+" ("+fmt(child.date)+") now falls before "+shortName(parent).toLowerCase()+" ("+fmt(parent.date)+")",
+          [{label:"Move to "+fmt(minDate),go:true,act:function(){setDate(child,minDate,"Moved by "+OWNERS[child.owner]);}},
+           {label:"Move to "+fmt(addDays(minDate,7)),act:function(){setDate(child,addDays(minDate,7),"Moved by "+OWNERS[child.owner]);}},
+           {label:"Keep "+fmt(child.date)+", challenge the cutover",act:function(){challenge(child,parent);}}]);
+        blockChildren(child.id);
+      } else {log("check",'"'+shortName(child)+'" checked. Still consistent.');}
+      return;
+    }
+    if(d.kind==="before"){
+      var maxDate=addDays(parent.date,d.days);
+      if(child.date>maxDate){
+        raise(child,"conflict",parent,d,shortName(child)+" now lands too close to cutover",
+          [{label:"Move to "+fmt(maxDate),go:true,act:function(){setDate(child,maxDate,"Moved by "+OWNERS[child.owner]);}},
+           {label:"Keep "+fmt(child.date),act:function(){keep(child);}}]);
+      } else {
+        log("check",'"'+shortName(child)+'" checked. Still '+diffDays(parent.date,child.date)+" days before cutover, so no action needed.");
+        S.status[child.id]="ok";
+      }
+      return;
+    }
+    if(d.kind==="propose"){
+      var pd=addDays(parent.date,d.days);
+      if(pd!==child.date){
+        raise(child,"proposal",parent,d,"Proposed: move "+shortName(child).toLowerCase()+" from "+fmt(child.date)+" to "+fmt(pd),
+          [{label:"Confirm "+fmt(pd),go:true,act:function(){setDate(child,pd,"Confirmed by "+OWNERS[child.owner]);}},
+           {label:"Keep "+fmt(child.date),act:function(){keep(child);}}]);
+      }
+    }
+  });
+}
+
+function shortName(f){
+  return {cutover:"Cutover",traffic:"100% traffic deadline",rollback:"Rollback window",retire:"Legacy login retirement",email:"Customer email",qa:"QA sign-off",spec:"Sign-in spec",sms:"SMS fallback question"}[f.id];
+}
+
+function raise(child,kind,parent,d,title,options){
+  var ex=openItemFor(child.id);
+  if(ex){ex.done=true;log("check","Earlier request to "+OWNERS[child.owner]+" replaced with an updated one, because the facts changed again.");}
+  S.status[child.id]=kind==="conflict"?"conflict":"pending";
+  S.metrics.person++;
+  var it={id:++S.seq,factId:child.id,kind:kind,owner:child.owner,title:title,why:d.why,options:options,openedAt:S.clock,done:false};
+  S.inbox.push(it);flash(child.id);
+  log("person",(kind==="conflict"?"Conflict":"Proposal")+" sent to "+OWNERS[child.owner]+": "+title+".");
+}
+
+function blockChildren(id){
+  dependents(id).forEach(function(c){S.status[c.id]="blocked";S.blockedBy[c.id]=id;});
+}
+
+function settle(it,note){
+  it.done=true;S.settledTimes.push(S.clock-it.openedAt);
+  log("person",note+" ("+(S.clock-it.openedAt)+" min after it was raised).");
+}
+
+function setDate(f,nd,who){
+  var it=openItemFor(f.id);tick(6);
+  S.prev[f.id]=f.date;f.date=nd;S.status[f.id]="updated";flash(f.id);
+  if(it)settle(it,who+': "'+f.text(f)+'"');
+  resolveAssumption(f.id);
+  ripple(f.id);
+}
+
+function keep(f){
+  var it=openItemFor(f.id);tick(4);
+  S.status[f.id]="ok";flash(f.id);
+  if(it)settle(it,OWNERS[f.owner]+' kept "'+f.text(f)+'" on purpose. Override recorded with the reason');
+  resolveAssumption(f.id);
+}
+
+function challenge(child,parent){
+  var it=openItemFor(child.id);tick(5);
+  if(it)settle(it,OWNERS[child.owner]+" kept "+fmt(child.date)+" and challenged the cutover");
+  S.status[child.id]="ok";
+  dependents(child.id).forEach(function(c){if(S.blockedBy[c.id]===child.id){delete S.blockedBy[c.id];S.status[c.id]="ok";}});
+  S.metrics.person++;
+  var nit={id:++S.seq,factId:parent.id,kind:"conflict",owner:parent.owner,
+    title:OWNERS[child.owner]+" needs full traffic by "+fmt(child.date)+", which the "+fmt(parent.date)+" cutover can't meet",
+    why:"Two decisions can't both hold. The cutover owner makes the call, and everyone sees the outcome.",
+    options:[{label:"Move cutover back to "+fmt(child.date),go:true,act:function(){setDate(parent,child.date,"Changed by "+OWNERS[parent.owner]);}},
+             {label:"Keep "+fmt(parent.date)+" (Sam moves traffic)",act:function(){var x=openItemFor(parent.id);tick(4);if(x)settle(x,OWNERS[parent.owner]+" kept the cutover. The traffic deadline must move");S.status[parent.id]="ok";S.status[child.id]="ok";raiseAgainTraffic();}}],
+    openedAt:S.clock,done:false};
+  S.inbox.push(nit);S.status[parent.id]="conflict";flash(parent.id);
+  log("person","Escalated to "+OWNERS[parent.owner]+": "+nit.title+".");
+}
+function raiseAgainTraffic(){var t=F("traffic"),c=F("cutover");
+  raise(t,"conflict",c,t.deps[0],"Cutover stays "+fmt(c.date)+", so the 100% traffic deadline must move",
+   [{label:"Move to "+fmt(c.date),go:true,act:function(){setDate(t,c.date,"Moved by "+OWNERS.sam);}},
+    {label:"Move to "+fmt(addDays(c.date,7)),act:function(){setDate(t,addDays(c.date,7),"Moved by "+OWNERS.sam);}}]);
+  blockChildren("traffic");}
+
+/* Events */
+var EVENTS=[
+  {key:"jira",src:"jira",label:"JIRA · AUTH-142",t:"Cutover moved to 16 Dec",d:"Dana updates the ticket that owns the cutover date.",
+   run:function(){
+     var c=F("cutover");tick(3);S.prev.cutover=c.date;c.date=D(2026,12,16);S.status.cutover="updated";flash("cutover");
+     log("source","Jira AUTH-142 (source of record) moved the cutover from "+fmt(S.prev.cutover)+" to 16 Dec. Applied.");
+     ripple("cutover");
+     ["spec","sms"].forEach(function(id){S.metrics.checked++;log("check",'"'+shortName(F(id))+'" has no date link to the cutover. Unaffected.');});
+   }},
+  {key:"agent",src:"agent",label:"CODING AGENT",t:"“When does legacy login retire?”",d:"Before it removes the old login redirect.",
+   run:function(){agentAsk();}},
+  {key:"slack",src:"slack",label:"SLACK · #auth-cutover",t:"“Heard the cutover is slipping to 23 Dec?”",d:"Newer than the Jira decision, but it isn't the source of record.",
+   run:function(){
+     var c=F("cutover");tick(7);S.metrics.person++;S.metrics.checked++;
+     var it={id:++S.seq,factId:"cutover-claim",kind:"claim",owner:"dana",
+       title:"A Slack message says 23 Dec. The decision of record says "+fmt(c.date)+".",
+       why:"A newer message isn't automatically more right. Memory keeps "+fmt(c.date)+" and asks the owner instead of guessing.",
+       options:[{label:"It's right: move to 23 Dec",act:function(){it.done=true;S.settledTimes.push(S.clock-it.openedAt);log("person","Dana confirmed the Slack report. Updating the decision of record.");setDate(c,D(2026,12,23),"Changed by Dana Ortiz");}},
+                {label:"It's wrong: reply in thread",go:true,act:function(){tick(3);it.done=true;S.settledTimes.push(S.clock-it.openedAt);log("person","Dana replied in #auth-cutover: the date stays "+fmt(c.date)+". No memory changed ("+(S.clock-it.openedAt)+" min).");}}],
+       openedAt:S.clock,done:false};
+     S.inbox.push(it);
+     log("source","Slack #auth-cutover claims a 23 Dec cutover. It conflicts with Jira AUTH-142, so memory was not changed.");
+   }},
+  {key:"github",src:"github",label:"GITHUB · PR #212",t:"Rate-limit fix merged",d:"A change with no date links to anything here.",
+   run:function(){tick(2);S.metrics.checked++;log("source","GitHub PR #212 merged. No facts in this memory depend on it, so nothing moved.");}}
+];
+
+function agentAsk(){
+  var r=F("retire");tick(4);
+  var pending=openItemFor("retire");
+  var lines=[];
+  lines.push({c:"q",t:"agent › Before I remove the legacy login redirect: when does legacy login retire?"});
+  if(pending){
+    var proposed=addDays(F("cutover").date,30);
+    lines.push({c:"a",t:"memory › Decision of record: "+fmt(r.date)+" (owner Dana Ortiz, Confluence: Auth plan)."});
+    lines.push({c:"w",t:"memory › Warning: the cutover moved to "+fmt(F("cutover").date)+". A change to "+fmt(proposed)+" is waiting on Dana."});
+    lines.push({c:"q",t:"agent › I'll plan the redirect removal for "+fmt(proposed)+" and record that as an assumption."});
+    lines.push({c:"s",t:"memory › Saved as an assumption until Dana decides. Nothing ships on it yet."});
+    S.assumption={value:proposed,openedAt:S.clock,done:false};
+    S.metrics.person++;
+    log("agent","Coding agent assumed legacy login retires "+fmt(proposed)+". Saved as an assumption for Dana, not as a fact.");
+  } else {
+    lines.push({c:"a",t:"memory › "+fmt(r.date)+". Decision of record, owner Dana Ortiz. No open questions on it."});
+    lines.push({c:"s",t:"memory › Nothing pending. Safe to plan against."});
+    log("agent","Coding agent read the retirement date ("+fmt(r.date)+"). No assumption needed.");
+  }
+  S.agent=lines;
+}
+
+function resolveAssumption(factId){
+  if(factId!=="retire"||!S.assumption||S.assumption.done)return;
+  var r=F("retire");S.assumption.done=true;
+  if(r.date===S.assumption.value){
+    log("agent","Dana's decision matches the agent's assumption ("+fmt(r.date)+"). Assumption confirmed and closed.");
+    S.agent.push({c:"s",t:"memory › Dana confirmed "+fmt(r.date)+". Your assumption is now a fact."});
+  } else {
+    log("agent","Dana kept "+fmt(r.date)+". The agent's assumption was rejected and the agent was told.");
+    S.agent.push({c:"w",t:"memory › Dana kept "+fmt(r.date)+". Your assumption was rejected. Replan the redirect removal for "+fmt(r.date)+"."});
+  }
+}
+
+/* Guide */
+function guide(){
+  var c=F("cutover");
+  var openTraffic=openItemFor("traffic");
+  if(!S.fired.jira) return [1,"Start here: click <b>Cutover moved to 16 Dec</b>. A source-of-record change ripples through every fact that depends on it.","jira"];
+  if(openItemFor("cutover")) return [2,"Sam challenged the cutover instead of moving his deadline. Now Dana, who owns the cutover, makes the call. Two decisions can't both hold.",null];
+  if(openTraffic) return [2,"The 9 Dec traffic deadline now breaks the new cutover, so it went to its owner, Sam. Settle it under Needs a person. Notice the rollback window waits until he does.",null];
+  if(!S.fired.agent) return [3,"Now ask as a coding agent: click <b>When does legacy login retire?</b> Watch what happens when the answer is still pending.","agent"];
+  if(openItemFor("retire")||openItemFor("email")) return [4,"Settle Dana's and Lena's proposals. When Dana decides, the agent's assumption is confirmed or rejected automatically.",null];
+  if(!S.fired.slack) return [5,"Last one: a newer Slack message contradicts the decision. Click <b>Heard the cutover is slipping</b>. Newer isn't automatically right.","slack"];
+  return [5,"That's the full loop: rules handle the arithmetic, owners make the calls, and agents never build on a guess silently. Try <b>Reset demo</b> and choose differently.",null];
+}
+
+/* Render */
+function render(){
+  var g=guide();
+  document.getElementById("guideStep").textContent="STEP "+g[0]+" OF 5";
+  document.getElementById("guideTxt").innerHTML=g[1];
+
+  var ev=document.getElementById("events");ev.innerHTML="";
+  EVENTS.forEach(function(e){
+    var b=document.createElement("button");b.type="button";b.className="event"+(g[2]===e.key?" pulse":"");
+    b.disabled=S.fired[e.key]||(e.key!=="jira"&&!S.fired.jira);
+    b.setAttribute("data-key",e.key);
+    b.innerHTML='<span class="src '+e.src+'">'+esc(e.label)+'</span><div class="t">'+esc(e.t)+'</div><div class="d">'+esc(e.d)+'</div>';
+    b.addEventListener("click",function(){if(S.fired[e.key])return;S.fired[e.key]=true;e.run();render();});
+    ev.appendChild(b);
+  });
+  var n=document.createElement("div");n.className="note";n.textContent=S.fired.jira?"Each change can be sent once. Reset to replay.":"Start with the Jira change. The others unlock after it.";ev.appendChild(n);
+
+  var fl=document.getElementById("facts");fl.innerHTML="";
+  S.facts.forEach(function(f){
+    var st=S.status[f.id]||"ok";
+    var div=document.createElement("div");div.className="fact "+st+(flashIds[f.id]?" flash":"");div.setAttribute("data-fact",f.id);
+    var typeCls=f.type==="Deadline"?"deadline":f.type==="Open question"?"question":f.type==="Spec"?"spec":"";
+    var label={ok:"Current",conflict:"Conflict: owner deciding",pending:"Proposal: owner deciding",blocked:"Waiting on "+(S.blockedBy[f.id]?shortName(F(S.blockedBy[f.id])).toLowerCase():"another fact"),updated:"Updated"}[st];
+    var oldTxt=(st==="updated"&&S.prev[f.id]!=null)?'<span class="old">'+fmt(S.prev[f.id])+'</span>':"";
+    var depTxt=f.deps.map(function(d){var p=F(d.on);
+      var k={after:"must be on or after",rule:"is "+d.days+" days after",propose:(d.days>=0?"planned "+d.days+" days after":"planned "+(-d.days)+" days before"),before:"must be at least "+(-d.days)+" days before"}[d.kind];
+      return "Depends on: "+shortName(f)+" "+k+" "+shortName(p).toLowerCase()+(d.kind==="rule"?" (rule, updates itself)":" (owner decides)");}).join("<br>");
+    div.innerHTML='<div class="frow"><span class="type '+typeCls+'">'+esc(f.type.toUpperCase())+'</span><span class="status '+st+'">'+esc(label)+'</span></div>'+
+      '<div class="ftext">'+oldTxt+esc(f.text(f))+'</div>'+
+      '<div class="fmeta">Owner <b>'+esc(OWNERS[f.owner])+'</b> · '+esc(ROLES[f.owner])+' · Source: '+esc(f.source)+'</div>'+
+      (depTxt?'<div class="dep">'+depTxt+'</div>':"");
+    fl.appendChild(div);
+  });
+  renderMap();
+  document.getElementById("factCount").textContent=S.facts.length+" facts";
+  flashIds={};
+
+  var ib=document.getElementById("inbox");ib.innerHTML="";
+  var open=S.inbox.filter(function(i){return !i.done;});
+  if(S.assumption&&!S.assumption.done){
+    var a=document.createElement("div");a.className="item assumption";
+    a.innerHTML='<div class="who"><span>For <b>Dana Ortiz</b></span><span>Agent assumption</span></div><div class="ttl">Coding agent is planning around '+fmt(S.assumption.value)+'</div><div class="why">It resolves on its own when Dana settles the retirement date below.</div>';
+    ib.appendChild(a);
+  }
+  open.forEach(function(it){
+    var c=document.createElement("div");c.className="item "+it.kind;c.setAttribute("data-item",it.factId);
+    var kindLabel={conflict:"Conflict",proposal:"Proposal",claim:"Unconfirmed claim"}[it.kind];
+    c.innerHTML='<div class="who"><span>For <b>'+esc(OWNERS[it.owner])+'</b></span><span>'+kindLabel+' · raised '+fmtClock(it.openedAt)+'</span></div><div class="ttl">'+esc(it.title)+'</div><div class="why">Why: '+esc(it.why)+'</div>';
+    var o=document.createElement("div");o.className="opts";
+    it.options.forEach(function(op){var b=document.createElement("button");b.type="button";b.className="btn"+(op.go?" go":"");b.textContent=op.label;
+      b.addEventListener("click",function(){if(it.done)return;op.act();render();toast("Settled. Everything that depends on it was re-checked.");});o.appendChild(b);});
+    c.appendChild(o);ib.appendChild(c);
+  });
+  if(!open.length&&!(S.assumption&&!S.assumption.done)){ib.innerHTML='<div class="empty">'+(S.fired.jira?"Nothing waiting on anyone.":"Calls that need a person will land here.")+'</div>';}
+  var openCount=open.length+((S.assumption&&!S.assumption.done)?1:0);
+  document.getElementById("inboxCount").textContent=openCount;
+
+  document.getElementById("mChecked").textContent=S.metrics.checked;
+  document.getElementById("mRule").textContent=S.metrics.rule;
+  document.getElementById("mPerson").textContent=S.metrics.person;
+  document.getElementById("mOpen").textContent=open.length;
+  document.getElementById("mAssume").textContent=(S.assumption&&!S.assumption.done)?1:0;
+  var md=median(S.settledTimes);document.getElementById("mMedian").textContent=md===null?"\u2013":md;
+
+  var ag=document.getElementById("agent");
+  if(S.agent.length){ag.innerHTML=S.agent.map(function(l){return '<span class="'+l.c+'">'+esc(l.t)+'</span>';}).join("\n");}
+  else ag.innerHTML='<span class="s">The agent asks team memory before it acts. Its answers appear here.</span>';
+
+  var lg=document.getElementById("log");
+  lg.innerHTML=S.log.length?S.log.map(function(r){return '<div class="row"><span class="time">'+r.t+'</span><span class="lane '+r.lane+'">'+({source:"SOURCE",rule:"RULE",person:"PERSON",agent:"AGENT",check:"CHECK"}[r.lane])+'</span><span>'+esc(r.text)+'</span></div>';}).join(""):'<div class="empty">Every change, check and decision is recorded here with its source.</div>';
+  document.getElementById("logCount").textContent=S.log.length;
+  document.getElementById("clock").textContent="Simulated time "+now()+"";
+}
+
+var POS={cutover:[18,96],traffic:[250,10],rollback:[482,10],retire:[250,66],email:[250,122],qa:[250,178],spec:[482,122],sms:[482,178]};
+var MAPLBL={cutover:"Cutover",traffic:"100% traffic",rollback:"Rollback window",retire:"Retire legacy login",email:"Customer email",qa:"QA sign-off",spec:"Sign-in spec",sms:"SMS fallback?"};
+var pulseIds={};
+function renderMap(){
+  var W=160,H=36,svg=document.getElementById("map"),h="";
+  S.facts.forEach(function(f){f.deps.forEach(function(d){
+    var a=POS[d.on],b=POS[f.id],x1=a[0]+W,y1=a[1]+H/2,x2=b[0],y2=b[1]+H/2,mx=(x1+x2)/2;
+    var hot=(S.status[f.id]==="conflict"||S.status[f.id]==="pending"||S.status[f.id]==="updated"||S.status[f.id]==="blocked");
+    h+='<path class="edge'+(d.kind==="rule"?" rule":"")+(hot?" hot":"")+'" d="M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2+'"/>';
+    var lbl={after:"on/after",rule:"+"+d.days+" days (rule)",propose:(d.days>=0?"+":"\u2212")+Math.abs(d.days)+" days",before:"\u2265"+(-d.days)+" days before"}[d.kind];
+    h+='<text class="elabel" x="'+(x2-6)+'" y="'+(y2-6)+'" text-anchor="end">'+lbl+'</text>';
+  });});
+  S.facts.forEach(function(f){
+    var p=POS[f.id],st=S.status[f.id]||"ok",free=!f.deps.length&&!dependents(f.id).length;
+    var cls="node "+(free?"free":st)+(pulseIds[f.id]?" pulse":"");
+    h+='<g class="'+cls+'" data-node="'+f.id+'"><rect x="'+p[0]+'" y="'+p[1]+'" width="'+W+'" height="'+H+'" rx="8"/>'+
+       '<text x="'+(p[0]+10)+'" y="'+(p[1]+15)+'">'+esc(MAPLBL[f.id])+'</text>'+
+       '<text class="sub" x="'+(p[0]+10)+'" y="'+(p[1]+29)+'">'+(f.date?fmt(f.date):"no date")+(free?" \u00b7 not linked":"")+'</text></g>';
+  });
+  svg.innerHTML=h;pulseIds={};
+}
+function median(a){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y;}),m=Math.floor(b.length/2);return b.length%2?b[m]:Math.round((b[m-1]+b[m])/2);}
+function fmtClock(m){var h=Math.floor(m/60),mm=m%60;return (h<10?"0":"")+h+":"+(mm<10?"0":"")+mm;}
+
+function reset(){S=initialState();S.facts.forEach(function(f){S.status[f.id]="ok";});render();}
+document.getElementById("resetBtn").addEventListener("click",function(){reset();toast("Demo reset.");});
+reset();
+window.__ripple={state:function(){return S;},F:F};
+})();
+</script>
+</body>
+</html>
